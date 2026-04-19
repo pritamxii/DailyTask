@@ -581,5 +581,16 @@
     }
     function closeModal() { document.getElementById('dataModal').style.display = 'none'; }
 </script>
+<script>
+const CURRENT_VERSION = "1.0.0";
+
+fetch("https://raw.githubusercontent.com/pritamxii/Grow-Test/main/version.json")
+.then(res => res.json())
+.then(data => {
+   if (data.version !== CURRENT_VERSION) {
+      alert("🚀 New update available!");
+   }
+});
+</script>
 </body>
 </html>
