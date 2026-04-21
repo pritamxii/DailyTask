@@ -16,6 +16,7 @@
             --modal-bg: rgba(255, 255, 255, 0.95);
         }
 
+        /* --- SPLASH SCREEN --- */
         #splash-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -115,9 +116,10 @@
         .chart-container { height: 180px; width: 100%; }
         .input-group { display: flex; gap: 5px; margin: 5px 0; }
         .input-group input { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #EEE; outline: none; font-size: 14px; }
-        #ptsInput { width: 50px; flex: none; text-align: center; }
+        #ptsInput { width: 60px; flex: none; text-align: center; }
         .input-group button { background: var(--primary); color: white; border: none; padding: 0 15px; border-radius: 10px; font-weight: bold; }
 
+        /* --- MODERN EDIT MODAL --- */
         .modal { 
             display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.2); backdrop-filter: blur(4px); align-items: center; justify-content: center; 
@@ -146,6 +148,7 @@
         
         .dev-sig { text-align: center; font-size: 10px; color: #E6E6FA; opacity: 0.6; margin-top: 15px; margin-bottom: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
 
+        /* --- PERFORMANCE HISTORY STYLES --- */
         .history-container { 
             max-height: 0; overflow: hidden; background: white; border-radius: 15px; border: 1px solid transparent; 
             margin-top: 0; padding: 0 12px; transition: max-height 0.4s ease-out, padding 0.4s ease, margin-top 0.4s ease, border 0.2s ease; opacity: 0;
@@ -227,7 +230,7 @@
 
     <div class="input-group">
         <input type="text" id="habitInput" placeholder="New task...">
-        <input type="number" id="ptsInput" placeholder="Pts" min="1" max="10" value="1">
+        <input type="number" id="ptsInput" placeholder="Pts" min="0" max="10" step="0.1" value="1">
         <button onclick="addHabit()">ADD</button>
     </div>
 
@@ -262,7 +265,7 @@
     <div class="modal-content">
         <h4>Correction</h4>
         <input type="text" id="editInput" class="modal-input" placeholder="Task name">
-        <input type="number" id="editPtsInput" class="modal-input" placeholder="Points" min="1" max="10">
+        <input type="number" id="editPtsInput" class="modal-input" placeholder="Points" min="0" max="10" step="0.1">
         <div class="modal-btns">
             <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
             <button class="btn-confirm" id="saveEditBtn">Save</button>
@@ -292,16 +295,21 @@
         const yearSelect = document.getElementById('yearSelect');
         for(let y = realYear - 2; y <= realYear + 5; y++) {
             let opt = document.createElement('option');
-            opt.value = y; opt.innerHTML = y;
+            opt.value = y;
+            opt.innerHTML = y;
             if(y === realYear) opt.selected = true;
             yearSelect.appendChild(opt);
         }
+
         document.getElementById('load-bar').style.width = '100%';
         selectedMonth = monthsArr[realMonth];
         document.getElementById('monthSelect').value = selectedMonth;
         initChart();
         initCalendar();
-        setTimeout(() => { document.getElementById('splash-screen').classList.add('fade-out'); }, 1800);
+
+        setTimeout(() => {
+            document.getElementById('splash-screen').classList.add('fade-out');
+        }, 1800);
     };
 
     function initCalendar() {
@@ -315,6 +323,7 @@
             const dateObj = new Date(selectedYear, monthsArr.indexOf(selectedMonth), i);
             const isToday = (i === realToday && selectedMonth === monthsArr[realMonth] && selectedYear === realYear);
             const isPast = (dateObj < new Date(realYear, realMonth, realToday)); 
+            
             const pill = document.createElement('div');
             pill.className = `day-pill ${i === selectedDay ? 'active' : ''} ${isToday ? 'is-today' : ''} ${isPast && !isToday ? 'is-past' : ''}`;
             pill.innerHTML = `<span style="font-size:9px; color:#AAA;">${dayNames[dateObj.getDay()]}</span><span class="date-num">${i}</span>`;
@@ -330,19 +339,26 @@
         const btn = document.getElementById('toggleBtn');
         box.classList.toggle('open');
         btn.classList.toggle('active');
-        btn.innerText = box.classList.contains('open') ? "✖ Close History" : "📊 View Performance History";
+        if(box.classList.contains('open')) {
+            btn.innerText = "✖ Close History";
+            setTimeout(() => { box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+        } else {
+            btn.innerText = "📊 View Performance History";
+        }
     }
 
+    // UPDATED: WEIGHTED CALCULATION supporting float
     function calculateDailyScore(habits) {
         if (!habits || habits.length === 0) return 0;
         let totalPoints = 0;
         let earnedPoints = 0;
         habits.forEach(h => {
-            const pts = parseInt(h.points) || 1;
+            const pts = parseFloat(h.points) || 0;
             totalPoints += pts;
             if (h.done) earnedPoints += pts;
         });
-        return totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+        if (totalPoints === 0) return 0;
+        return Math.round((earnedPoints / totalPoints) * 100);
     }
 
     function calculateAchievements() {
@@ -388,6 +404,7 @@
         const historyList = document.getElementById('historyList');
         document.getElementById('historyHeader').innerText = `${selectedMonth} PERFORMANCE HISTORY`;
         historyList.innerHTML = '';
+        
         const daysInMonth = new Date(selectedYear, monthsArr.indexOf(selectedMonth) + 1, 0).getDate();
         let taskStats = {}; 
 
@@ -396,7 +413,9 @@
             const dayTasks = allData[key] || [];
             dayTasks.forEach(task => {
                 const taskName = task.text.trim();
-                if(!taskStats[taskName]) taskStats[taskName] = { total: 0, done: 0 };
+                if(!taskStats[taskName]) {
+                    taskStats[taskName] = { total: 0, done: 0 };
+                }
                 taskStats[taskName].total++;
                 if(task.done) taskStats[taskName].done++;
             });
@@ -477,24 +496,37 @@
             const newPts = document.getElementById('editPtsInput').value;
             if(newText.trim() !== "") {
                 allData[key][currentEditIdx].text = newText.trim();
-                allData[key][currentEditIdx].points = parseInt(newPts) || 1;
-                updateUI(); closeEditModal();
+                allData[key][currentEditIdx].points = parseFloat(newPts) || 0;
+                updateUI();
+                closeEditModal();
             }
         };
     }
 
-    function closeEditModal() { document.getElementById('editModal').style.display = 'none'; currentEditIdx = null; }
+    function closeEditModal() {
+        document.getElementById('editModal').style.display = 'none';
+        currentEditIdx = null;
+    }
 
     function addHabit() {
         const input = document.getElementById('habitInput');
         const ptsInput = document.getElementById('ptsInput');
         if(!input.value.trim()) return;
+        
         const now = new Date();
         const timeStr = now.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
         const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        
         if(!allData[key]) allData[key] = [];
-        allData[key].push({ text: input.value, done: false, time: timeStr, points: parseInt(ptsInput.value) || 1 });
-        input.value = ''; ptsInput.value = '1';
+        allData[key].push({ 
+            text: input.value, 
+            done: false, 
+            time: timeStr, 
+            points: parseFloat(ptsInput.value) || 0 
+        });
+        
+        input.value = '';
+        ptsInput.value = '1';
         updateUI();
     }
 
@@ -526,9 +558,16 @@
         const ctx = document.getElementById('habitChart').getContext('2d');
         myChart = new Chart(ctx, {
             type: 'line',
-            data: { labels: [], datasets: [{ data: [], borderColor: '#7E9CC7', backgroundColor: 'rgba(126, 156, 199, 0.2)', fill: true, tension: 0.4, pointRadius: 2 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, max: 100, ticks: { font: { size: 8 } } }, x: { grid: { display: false }, ticks: { font: { size: 8 } } } }
+            data: { labels: [], datasets: [{ 
+                data: [], borderColor: '#7E9CC7', backgroundColor: 'rgba(126, 156, 199, 0.2)', fill: true, tension: 0.4, pointRadius: 2
+            }] },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false } },
+                scales: { 
+                    y: { beginAtZero: true, max: 100, ticks: { font: { size: 8 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 8 } } }
+                }
             }
         });
     }
